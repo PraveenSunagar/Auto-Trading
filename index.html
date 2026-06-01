@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Auto Trading – Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Exo+2:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg0:#07101e;--bg1:#0d1627;--bg2:#111f35;--bg3:#152540;
+  --border:#1c2f4a;--border2:#233655;
+  --txt1:#e6f0ff;--txt2:#8aabcc;--txt3:#4a6a8a;
+  --green:#00d46a;--green2:#00a850;--red:#ef4444;--red2:#c03030;
+  --amber:#f59e0b;--blue:#2979ff;--purple:#7c3aed;--purple2:#5b21b6;
+  --cyan:#06b6d4;--sidebar:200px;--topbar:64px;
+  --r:12px;--r2:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg0);color:var(--txt1);font-family:'Exo 2',sans-serif;overflow:hidden}
+@media(max-width:760px){html,body{overflow:auto;height:auto}}
+
+/* ── LAYOUT ─────────────────────────────── */
+.layout{display:flex;height:100vh}
+@media(max-width:760px){.layout{height:auto;min-height:100vh;flex-direction:column}}
+
+/* ── SIDEBAR ─────────────────────────────── */
+.sidebar{
+  width:var(--sidebar);min-width:var(--sidebar);
+  background:var(--bg1);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;z-index:20;
+  transition:width .25s,min-width .25s;overflow:hidden;
+}
+.sidebar.collapsed{width:56px;min-width:56px}
+.sidebar.collapsed .nav-label,.sidebar.collapsed .brand-sub,
+.sidebar.collapsed .brand-name,.sidebar.collapsed .status-detail,
+.sidebar.collapsed .sidebar-footer-detail{display:none}
+.sidebar.collapsed .nav-item{justify-content:center;padding:12px 0}
+.sidebar.collapsed .brand{justify-content:center;padding:16px 0}
+
+.brand{display:flex;align-items:center;gap:10px;padding:18px 16px 14px;border-bottom:1px solid var(--border)}
+.brand-icon{width:36px;height:36px;background:linear-gradient(135deg,#7c3aed,#2979ff);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.brand-name{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;color:var(--txt1);line-height:1}
+.brand-name span{color:#60a5fa}
+.brand-sub{font-size:10px;color:var(--green);display:flex;align-items:center;gap:4px;margin-top:2px}
+.dot-live{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,212,106,.5)}50%{box-shadow:0 0 0 5px rgba(0,212,106,0)}}
+
+nav{flex:1;padding:10px 0;overflow-y:auto;overflow-x:hidden}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 16px;cursor:pointer;border-radius:0;position:relative;transition:background .15s;font-size:13.5px;font-weight:500;color:var(--txt2);white-space:nowrap}
+.nav-item:hover{background:var(--bg2);color:var(--txt1)}
+.nav-item.active{background:linear-gradient(90deg,rgba(124,58,237,.25),transparent);color:var(--txt1)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--purple);border-radius:0 3px 3px 0}
+.nav-icon{font-size:16px;flex-shrink:0;width:20px;text-align:center}
+
+.sidebar-bottom{padding:14px 12px;border-top:1px solid var(--border)}
+.market-status{font-size:11px;margin-bottom:6px;color:var(--txt2);font-weight:600;letter-spacing:.04em}
+.status-detail{font-size:11px;color:var(--green);font-weight:600;margin-bottom:10px}
+.time-label{font-size:10px;color:var(--txt3);margin-bottom:2px}
+.time-val{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;color:var(--txt1)}
+
+/* ── MAIN ─────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+@media(max-width:760px){.main{overflow:visible;height:auto}}
+
+/* ── TOPBAR ───────────────────────────────── */
+.topbar{
+  height:var(--topbar);min-height:var(--topbar);
+  background:var(--bg1);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;padding:0 18px;z-index:10;
+  position:sticky;top:0;
+}
+.menu-toggle{background:none;border:none;color:var(--txt2);font-size:20px;cursor:pointer;padding:4px 6px;border-radius:6px;transition:background .15s}
+.menu-toggle:hover{background:var(--bg2);color:var(--txt1)}
+.search-wrap{position:relative;flex:0 0 220px}
+.search-wrap input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:30px;color:var(--txt1);font-family:'Exo 2',sans-serif;font-size:13px;padding:8px 14px 8px 36px;outline:none;transition:border-color .2s}
+.search-wrap input::placeholder{color:var(--txt3)}
+.search-wrap input:focus{border-color:var(--blue)}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--txt3);font-size:14px;pointer-events:none}
+
+.indices{display:flex;gap:0;flex:1;justify-content:center}
+.idx-box{padding:6px 20px;border-right:1px solid var(--border);text-align:center;min-width:140px}
+.idx-box:last-child{border-right:none}
+.idx-name{font-size:10px;font-weight:600;color:var(--txt2);letter-spacing:.06em;margin-bottom:2px}
+.idx-val{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--txt1)}
+.idx-chg{font-size:11px;font-weight:600;margin-left:6px}
+.up{color:var(--green)}.down{color:var(--red)}
+
+.topbar-right{display:flex;align-items:center;gap:12px;margin-left:auto}
+.icon-btn{background:none;border:none;color:var(--txt2);font-size:18px;cursor:pointer;padding:5px;border-radius:7px;transition:background .15s,color .15s}
+.icon-btn:hover{background:var(--bg2);color:var(--txt1)}
+.user-chip{display:flex;align-items:center;gap:9px;cursor:pointer;padding:4px 10px 4px 4px;border-radius:30px;border:1px solid var(--border);transition:background .15s}
+.user-chip:hover{background:var(--bg2)}
+.user-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#ef4444);object-fit:cover;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff}
+.user-name{font-size:13px;font-weight:600;color:var(--txt1)}
+.user-status{font-size:10px;color:var(--green)}
+
+/* ── CONTENT ──────────────────────────────── */
+.content{flex:1;overflow-y:auto;overflow-x:hidden;padding:16px;display:grid;gap:14px;
+  grid-template-columns:1fr 1fr 320px;
+  grid-template-rows:auto auto auto;
+}
+@media(max-width:760px){
+  .content{overflow:visible;padding:10px;gap:10px}
+}
+
+/* ── CARDS ────────────────────────────────── */
+.card{background:var(--bg1);border:1.5px solid var(--border);border-radius:var(--r);padding:16px;overflow:hidden}
+.card-title{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--txt1);letter-spacing:.05em;margin-bottom:12px}
+
+/* ── PORTFOLIO ────────────────────────────── */
+.card-portfolio{grid-column:1;grid-row:1}
+.port-balance{font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;color:var(--txt1);line-height:1;margin-bottom:4px}
+.port-label{font-size:11px;color:var(--txt2);margin-bottom:4px}
+.port-pnl{font-size:13px;font-weight:600;color:var(--green);margin-bottom:14px}
+.port-chart-wrap{height:100px;margin-bottom:14px;position:relative}
+.port-stats{display:flex;gap:0;border-top:1px solid var(--border);padding-top:12px}
+.pstat{flex:1;text-align:center;border-right:1px solid var(--border)}
+.pstat:last-child{border-right:none}
+.pstat-label{font-size:10px;color:var(--txt2);margin-bottom:3px}
+.pstat-val{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--txt1)}
+
+/* ── SENTIMENT ────────────────────────────── */
+.card-sentiment{grid-column:2;grid-row:1;display:flex;flex-direction:column;align-items:center}
+.gauge-wrap{position:relative;width:180px;height:100px;margin:0 auto 10px}
+.gauge-pct{font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:var(--txt1);text-align:center;line-height:1}
+.gauge-mood{font-size:14px;font-weight:700;color:var(--green);text-align:center;margin-bottom:12px}
+.sentiment-pills{display:flex;gap:8px;width:100%;justify-content:center;flex-wrap:wrap}
+.pill{padding:7px 14px;border-radius:8px;text-align:center;flex:1;min-width:72px}
+.pill-label{font-size:11px;color:var(--txt2);margin-bottom:2px}
+.pill-val{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700}
+.pill-bull{background:rgba(0,212,106,.12);border:1px solid rgba(0,212,106,.25)}
+.pill-bull .pill-val{color:var(--green)}
+.pill-neut{background:rgba(100,116,139,.12);border:1px solid rgba(100,116,139,.25)}
+.pill-neut .pill-val{color:#94a3b8}
+.pill-bear{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25)}
+.pill-bear .pill-val{color:var(--red)}
+
+/* ── AI SIGNALS ───────────────────────────── */
+.card-signals{grid-column:3;grid-row:1 / 3}
+.sig-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.sig-row:last-child{border-bottom:none}
+.sig-logo{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;font-weight:800;border:1.5px solid rgba(255,255,255,.06)}
+.sig-info{flex:1;min-width:0}
+.sig-name{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--txt1);letter-spacing:.04em}
+.sig-target{font-size:11px;color:var(--txt2)}
+.sig-btn{padding:5px 14px;border-radius:6px;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:.07em;border:none;cursor:default;flex-shrink:0}
+.btn-buy-sm{background:linear-gradient(135deg,#00c851,#009640);color:#fff;box-shadow:0 2px 8px rgba(0,200,81,.25)}
+.btn-hold-sm{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;box-shadow:0 2px 8px rgba(245,158,11,.25)}
+.sig-conf{text-align:right;flex-shrink:0;min-width:70px}
+.conf-txt{font-size:10px;color:var(--txt2)}
+.conf-pct{font-size:12px;font-weight:700}
+.conf-bar-bg{height:4px;background:rgba(255,255,255,.07);border-radius:2px;margin-top:3px;overflow:hidden}
+.conf-bar{height:100%;border-radius:2px;transition:width 1s cubic-bezier(.22,.61,.36,1)}
+
+/* ── LIVE CHART ───────────────────────────── */
+.card-chart{grid-column:1;grid-row:2}
+.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.chart-tabs{display:flex;gap:4px}
+.chart-tab{padding:4px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;color:var(--txt2);transition:background .15s,color .15s}
+.chart-tab.active{background:var(--blue);color:#fff}
+.chart-tab:hover:not(.active){background:var(--bg2);color:var(--txt1)}
+.chart-canvas-wrap{height:160px;position:relative}
+
+/* ── HOLDINGS ─────────────────────────────── */
+.card-holdings{grid-column:2;grid-row:2;display:flex;flex-direction:column}
+.holdings-inner{display:flex;gap:14px;align-items:center;flex:1}
+.donut-wrap{width:130px;height:130px;position:relative;flex-shrink:0}
+.donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.donut-lbl{font-size:10px;color:var(--txt2)}
+.donut-val{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:var(--txt1)}
+.holdings-legend{flex:1;display:flex;flex-direction:column;gap:6px}
+.hleg{display:flex;align-items:center;gap:7px;font-size:12px}
+.hleg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.hleg-name{flex:1;color:var(--txt1);font-weight:500}
+.hleg-pct{color:var(--txt2);font-weight:600}
+
+/* ── RECENT TRADES ────────────────────────── */
+.card-trades{grid-column:3;grid-row:3}
+.trades-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.view-all{font-size:12px;color:var(--blue);font-weight:600;cursor:pointer;text-decoration:none}
+.trade-row-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.trade-row-item:last-child{border-bottom:none}
+.t-logo{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;border:1px solid rgba(255,255,255,.07)}
+.t-name{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;color:var(--txt1);min-width:68px}
+.t-action{font-size:11px;font-weight:700;min-width:28px}
+.t-meta{flex:1;font-size:10px;color:var(--txt2);line-height:1.5}
+.t-price{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;text-align:right}
+
+/* ── QUICK TRADE ──────────────────────────── */
+.card-quick{grid-column:1 / 3;grid-row:3}
+.quick-inner{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.qgroup{display:flex;flex-direction:column;gap:5px}
+.q-label{font-size:11px;color:var(--txt2);font-weight:500}
+.q-select,.q-input-wrap{background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--r2);color:var(--txt1);font-family:'Exo 2',sans-serif;font-size:13px;font-weight:500;outline:none;transition:border-color .2s}
+.q-select{padding:9px 32px 9px 12px;appearance:none;cursor:pointer;min-width:150px}
+.q-select:focus,.q-input:focus{border-color:var(--blue)}
+.q-select-wrap{position:relative}
+.q-select-wrap::after{content:'▾';position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--txt3);pointer-events:none;font-size:11px}
+.q-input-wrap{display:flex;align-items:center;overflow:hidden;padding:0}
+.q-input{background:transparent;border:none;outline:none;color:var(--txt1);font-family:'Exo 2',sans-serif;font-size:13px;font-weight:600;width:52px;padding:9px 8px;text-align:center}
+.q-input::-webkit-inner-spin-button,.q-input::-webkit-outer-spin-button{appearance:none}
+.q-input[type=number]{-moz-appearance:textfield}
+.q-step{background:none;border:none;border-left:1px solid var(--border);color:var(--txt2);width:30px;height:100%;padding:9px 0;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,color .15s;font-size:14px}
+.q-step:first-of-type{border-left:none;border-right:1px solid var(--border);order:-1}
+.q-step:hover{background:var(--bg3);color:var(--txt1)}
+.btn-buy-q{background:var(--green2);color:#fff;border:none;border-radius:var(--r2);padding:9px 22px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:.09em;cursor:pointer;box-shadow:0 2px 12px rgba(0,200,81,.3);transition:filter .15s;flex-shrink:0}
+.btn-sell-q{background:var(--red2);color:#fff;border:none;border-radius:var(--r2);padding:9px 20px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:.09em;cursor:pointer;box-shadow:0 2px 12px rgba(239,68,68,.3);transition:filter .15s;flex-shrink:0}
+.btn-buy-q:hover,.btn-sell-q:hover{filter:brightness(1.1)}
+.btn-place-order{background:linear-gradient(135deg,#7c3aed,#4a27d4);color:#fff;border:none;border-radius:var(--r2);padding:9px 28px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:.07em;cursor:pointer;box-shadow:0 3px 16px rgba(124,58,237,.4);transition:filter .15s;margin-left:auto;flex-shrink:0}
+.btn-place-order:hover{filter:brightness(1.12)}
+
+/* ── TOAST ─────────────────────────────────── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1e2d45;color:var(--txt1);font-size:13px;font-weight:600;padding:10px 22px;border-radius:30px;border:1px solid var(--blue);box-shadow:0 4px 20px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;white-space:nowrap;z-index:999}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── RESPONSIVE ───────────────────────────── */
+@media(max-width:1100px){
+  .content{grid-template-columns:1fr 1fr;grid-template-rows:auto}
+  .card-signals{grid-column:1/3;grid-row:auto}
+  .card-quick{grid-column:1/3;grid-row:auto}
+  .card-trades{grid-column:1/3;grid-row:auto}
+  .card-chart{grid-column:1;grid-row:auto}
+  .card-holdings{grid-column:2;grid-row:auto}
+  .card-portfolio{grid-column:1;grid-row:auto}
+  .card-sentiment{grid-column:2;grid-row:auto}
+}
+@media(max-width:760px){
+  :root{--sidebar:0px}
+  .sidebar{
+    position:fixed;left:0;top:0;bottom:0;z-index:50;
+    transform:translateX(-100%);
+    transition:transform .25s,width .25s;
+    width:200px!important;min-width:200px!important;
+    height:100vh;overflow-y:auto;
+  }
+  .sidebar.mobile-open{transform:translateX(0)}
+  .sidebar .nav-label,
+  .sidebar .brand-sub,
+  .sidebar .brand-name,
+  .sidebar .status-detail{display:flex!important}
+  .sidebar .nav-item{justify-content:flex-start!important;padding:11px 16px!important}
+  .sidebar .brand{justify-content:flex-start!important;padding:18px 16px 14px!important}
+  .overlay{display:block}
+
+  .content{
+    grid-template-columns:1fr!important;
+    grid-template-rows:auto!important;
+  }
+  .card-portfolio,.card-sentiment,.card-signals,
+  .card-chart,.card-holdings,.card-quick,.card-trades{
+    grid-column:1!important;grid-row:auto!important;
+  }
+
+  /* topbar mobile */
+  .topbar{padding:0 10px;gap:8px;flex-wrap:nowrap;height:56px;min-height:56px}
+  .indices{display:none}
+  .search-wrap{flex:1;min-width:0}
+  .search-wrap input{font-size:12px;padding:7px 10px 7px 30px}
+  .icon-btn{padding:4px;font-size:16px}
+  .user-name,.user-status{display:none}
+  .user-chip{padding:4px}
+
+  /* cards */
+  .card{padding:14px 12px}
+  .port-balance{font-size:22px}
+  .port-stats{flex-wrap:wrap}
+  .pstat{flex:1 1 33%}
+
+  /* sentiment */
+  .card-sentiment{align-items:flex-start}
+  .gauge-wrap{width:160px;height:90px}
+  .gauge-pct{font-size:26px}
+  .sentiment-pills{flex-wrap:nowrap}
+  .pill{min-width:60px;padding:6px 8px}
+
+  /* signals */
+  .sig-conf{min-width:60px}
+  .sig-conf .conf-txt{font-size:9px}
+
+  /* chart tabs */
+  .chart-tab{padding:3px 8px;font-size:10px}
+
+  /* holdings */
+  .holdings-inner{gap:10px}
+  .donut-wrap{width:110px;height:110px}
+
+  /* quick trade */
+  .quick-inner{flex-direction:column;align-items:stretch;gap:10px}
+  .quick-inner>*{width:100%}
+  .qgroup{width:100%}
+  .q-select{width:100%;min-width:unset}
+  .q-input-wrap{width:100%}
+  .q-input{flex:1;width:auto}
+  .btn-buy-q,.btn-sell-q{flex:1;text-align:center}
+  .btn-place-order{width:100%;margin-left:0;text-align:center}
+  .quick-inner>div:nth-child(2){display:flex;gap:8px}
+}
+
+@media(max-width:400px){
+  .topbar{padding:0 8px;gap:6px}
+  .card{padding:12px 10px}
+  .port-balance{font-size:19px}
+  .sig-row{gap:7px}
+  .sig-btn{padding:4px 10px;font-size:11px}
+}
+
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40}
+
+/* Logo colors */
+.logo-reliance{background:radial-gradient(circle at 40% 35%,#1a1228,#0d0d1a)}
+.logo-tata{background:radial-gradient(circle at 40% 35%,#0d47a1,#082a6e)}
+.logo-infy{background:radial-gradient(circle at 40% 35%,#004d40,#00251a)}
+.logo-hdfc{background:radial-gradient(circle at 40% 35%,#7f0000,#5c0000)}
+.logo-icici{background:radial-gradient(circle at 40% 35%,#b71c1c,#7f0000)}
+.logo-tcs{background:radial-gradient(circle at 40% 35%,#0d47a1,#082a6e)}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg0)}
+::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="overlay" id="overlay" onclick="closeMobileSidebar()"></div>
+
+<div class="layout">
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <div class="brand-icon">🤖</div>
+    <div>
+      <div class="brand-name">Auto Tradin<span>g</span></div>
+      <div class="brand-sub"><span class="dot-live"></span>AI Assistant</div>
+    </div>
+  </div>
+  <nav>
+    <div class="nav-item active" onclick="setNav(this,'Dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span></div>
+    <div class="nav-item" onclick="setNav(this,'Watchlist')"><span class="nav-icon">👁</span><span class="nav-label">Watchlist</span></div>
+    <div class="nav-item" onclick="setNav(this,'Market Analysis')"><span class="nav-icon">📊</span><span class="nav-label">Market Analysis</span></div>
+    <div class="nav-item" onclick="setNav(this,'AI Signals')"><span class="nav-icon">🤖</span><span class="nav-label">AI Signals</span></div>
+    <div class="nav-item" onclick="setNav(this,'Portfolio')"><span class="nav-icon">💼</span><span class="nav-label">Portfolio</span></div>
+    <div class="nav-item" onclick="setNav(this,'Backtest')"><span class="nav-icon">📈</span><span class="nav-label">Backtest</span></div>
+    <div class="nav-item" onclick="setNav(this,'Orders')"><span class="nav-icon">📋</span><span class="nav-label">Orders</span></div>
+    <div class="nav-item" onclick="setNav(this,'Settings')"><span class="nav-icon">⚙️</span><span class="nav-label">Settings</span></div>
+    <div class="nav-item" onclick="setNav(this,'Profile')"><span class="nav-icon">👤</span><span class="nav-label">Profile</span></div>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="market-status">Market Status &nbsp;<span style="color:var(--green)">● Live</span></div>
+    <div class="status-detail">NSE &bull; BSE</div>
+    <div class="time-label">Time</div>
+    <div class="time-val" id="clock">10:45:32 AM</div>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()">☰</button>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search stocks...">
+    </div>
+
+    <div class="indices">
+      <div class="idx-box">
+        <div class="idx-name">NIFTY 50</div>
+        <div class="idx-val">24,708.45 <span class="idx-chg up">+0.86% ▲</span></div>
+      </div>
+      <div class="idx-box">
+        <div class="idx-name">SENSEX</div>
+        <div class="idx-val">80,942.71 <span class="idx-chg up">+0.72% ▲</span></div>
+      </div>
+      <div class="idx-box">
+        <div class="idx-name">BANK NIFTY</div>
+        <div class="idx-val">51,273.60 <span class="idx-chg up">+1.12% ▲</span></div>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <button class="icon-btn">🔔</button>
+      <button class="icon-btn">☀️</button>
+      <div class="user-chip">
+        <div class="user-avatar">J</div>
+        <div>
+          <div class="user-name">Jyothi</div>
+          <div class="user-status">● Online</div>
+        </div>
+        <span style="color:var(--txt3);font-size:11px;margin-left:2px">▾</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENT GRID -->
+  <div class="content">
+
+    <!-- PORTFOLIO OVERVIEW -->
+    <div class="card card-portfolio">
+      <div class="card-title">Portfolio Overview</div>
+      <div class="port-label">Total Balance</div>
+      <div class="port-balance">₹1,25,430.75</div>
+      <div class="port-pnl">+₹4,325.60 (+3.57%)</div>
+      <div class="port-chart-wrap"><canvas id="portChart"></canvas></div>
+      <div class="port-stats">
+        <div class="pstat"><div class="pstat-label">Invested</div><div class="pstat-val">₹1,12,000</div></div>
+        <div class="pstat"><div class="pstat-label">Current Value</div><div class="pstat-val">₹1,25,430.75</div></div>
+        <div class="pstat"><div class="pstat-label">Available Cash</div><div class="pstat-val">₹13,430.75</div></div>
+      </div>
+    </div>
+
+    <!-- AI MARKET SENTIMENT -->
+    <div class="card card-sentiment">
+      <div class="card-title">AI Market Sentiment</div>
+      <div class="gauge-wrap"><canvas id="gaugeChart"></canvas>
+        <div class="donut-center" style="bottom:0;top:auto;height:60%">
+          <div style="font-size:26px">🤖</div>
+        </div>
+      </div>
+      <div class="gauge-pct">73%</div>
+      <div class="gauge-mood">Bullish</div>
+      <div class="sentiment-pills">
+        <div class="pill pill-bull"><div class="pill-label">Bullish</div><div class="pill-val">73%</div></div>
+        <div class="pill pill-neut"><div class="pill-label">Neutral</div><div class="pill-val">18%</div></div>
+        <div class="pill pill-bear"><div class="pill-label">Bearish</div><div class="pill-val">9%</div></div>
+      </div>
+    </div>
+
+    <!-- AI SIGNALS -->
+    <div class="card card-signals">
+      <div class="card-title">AI Signal (Today)</div>
+      <div class="sig-row">
+        <div class="sig-logo logo-reliance"><svg width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="18" fill="#1a1228"/><text x="18" y="23" text-anchor="middle" fill="#e53935" font-size="13" font-weight="800" font-family="Rajdhani">R</text></svg></div>
+        <div class="sig-info"><div class="sig-name">RELIANCE</div><div class="sig-target">Target: ₹2,950</div></div>
+        <button class="sig-btn btn-buy-sm">BUY</button>
+        <div class="sig-conf"><div class="conf-txt">Confidence <span class="conf-pct up">88%</span></div><div class="conf-bar-bg"><div class="conf-bar" style="width:88%;background:linear-gradient(90deg,#00963d,#00e676)"></div></div></div>
+      </div>
+      <div class="sig-row">
+        <div class="sig-logo logo-tata"><svg width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="18" fill="#082a6e"/><text x="18" y="23" text-anchor="middle" fill="#90caf9" font-size="9" font-weight="800" font-family="Rajdhani">TATA</text></svg></div>
+        <div class="sig-info"><div class="sig-name">TATA MOTORS</div><div class="sig-target">Target: ₹1,050</div></div>
+        <button class="sig-btn btn-buy-sm">BUY</button>
+        <div class="sig-conf"><div class="conf-txt">Confidence <span class="conf-pct up">88%</span></div><div class="conf-bar-bg"><div class="conf-bar" style="width:88%;background:linear-gradient(90deg,#00963d,#00e676)"></div></div></div>
+      </div>
+      <div class="sig-row">
+        <div class="sig-logo logo-infy"><svg width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="18" fill="#00251a"/><text x="18" y="23" text-anchor="middle" fill="#26a69a" font-size="8" font-weight="800" font-family="Rajdhani">Infosys</text></svg></div>
+        <div class="sig-info"><div class="sig-name">INFY</div><div class="sig-target">Target: ₹1,650</div></div>
+        <button class="sig-btn btn-hold-sm">HOLD</button>
+        <div class="sig-conf"><div class="conf-txt">Confidence <span class="conf-pct" style="color:var(--amber)">64%</span></div><div class="conf-bar-bg"><div class="conf-bar" style="width:64%;background:linear-gradient(90deg,#d97706,#f59e0b)"></div></div></div>
+      </div>
+      <div class="sig-row">
+        <div class="sig-logo logo-hdfc"><svg width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="18" fill="#5c0000"/><rect x="16" y="9" width="4" height="18" rx="1.5" fill="white"/><rect x="9" y="16" width="18" height="4" rx="1.5" fill="white"/></svg></div>
+        <div class="sig-info"><div class="sig-name">HDFC BANK</div><div class="sig-target">Target: ₹1,780</div></div>
+        <button class="sig-btn btn-buy-sm">BUY</button>
+        <div class="sig-conf"><div class="conf-txt">Confidence <span class="conf-pct up">85%</span></div><div class="conf-bar-bg"><div class="conf-bar" style="width:85%;background:linear-gradient(90deg,#00963d,#00e676)"></div></div></div>
+      </div>
+    </div>
+
+    <!-- LIVE MARKET CHART -->
+    <div class="card card-chart">
+      <div class="chart-header">
+        <div class="card-title" style="margin-bottom:0">Live Market Chart</div>
+        <div class="chart-tabs">
+          <div class="chart-tab active" onclick="setChartTab(this,'1D')">1D</div>
+          <div class="chart-tab" onclick="setChartTab(this,'1W')">1W</div>
+          <div class="chart-tab" onclick="setChartTab(this,'1M')">1M</div>
+          <div class="chart-tab" onclick="setChartTab(this,'3M')">3M</div>
+          <div class="chart-tab" onclick="setChartTab(this,'1Y')">1Y</div>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap" style="height:200px;margin-top:12px"><canvas id="candleChart"></canvas></div>
+    </div>
+
+    <!-- HOLDINGS -->
+    <div class="card card-holdings">
+      <div class="card-title">Holdings</div>
+      <div class="holdings-inner">
+        <div class="donut-wrap">
+          <canvas id="donutChart"></canvas>
+          <div class="donut-center">
+            <div class="donut-lbl">Total</div>
+            <div class="donut-val">₹1,25,430</div>
+          </div>
+        </div>
+        <div class="holdings-legend">
+          <div class="hleg"><div class="hleg-dot" style="background:#00d46a"></div><div class="hleg-name">RELIANCE</div><div class="hleg-pct">28.4%</div></div>
+          <div class="hleg"><div class="hleg-dot" style="background:#818cf8"></div><div class="hleg-name">TCS</div><div class="hleg-pct">21.7%</div></div>
+          <div class="hleg"><div class="hleg-dot" style="background:#4a90d9"></div><div class="hleg-name">HDFC BANK</div><div class="hleg-pct">18.6%</div></div>
+          <div class="hleg"><div class="hleg-dot" style="background:#f59e0b"></div><div class="hleg-name">INFOSYS</div><div class="hleg-pct">15.3%</div></div>
+          <div class="hleg"><div class="hleg-dot" style="background:#f97316"></div><div class="hleg-name">ICICI BANK</div><div class="hleg-pct">10.2%</div></div>
+          <div class="hleg"><div class="hleg-dot" style="background:#94a3b8"></div><div class="hleg-name">Others</div><div class="hleg-pct">5.8%</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECENT TRADES -->
+    <div class="card card-trades">
+      <div class="trades-header">
+        <div class="card-title" style="margin-bottom:0">Recent Trades</div>
+        <a href="#" class="view-all">View All</a>
+      </div>
+      <div class="trade-row-item">
+        <div class="t-logo logo-reliance"><svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="15" fill="#1a1228"/><text x="15" y="20" text-anchor="middle" fill="#e53935" font-size="11" font-weight="800" font-family="Rajdhani">R</text></svg></div>
+        <div class="t-name">RELIANCE</div>
+        <div class="t-action up">Buy</div>
+        <div class="t-meta">10:15 AM<br>Qty: 10</div>
+        <div class="t-price up">₹2,845.30</div>
+      </div>
+      <div class="trade-row-item">
+        <div class="t-logo logo-tcs"><svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="15" fill="#082a6e"/><text x="15" y="20" text-anchor="middle" fill="#90caf9" font-size="8" font-weight="800" font-family="Rajdhani">TCS</text></svg></div>
+        <div class="t-name">TCS</div>
+        <div class="t-action up">Buy</div>
+        <div class="t-meta">10:02 AM<br>Qty: 5</div>
+        <div class="t-price up">₹3,910.45</div>
+      </div>
+      <div class="trade-row-item">
+        <div class="t-logo logo-infy"><svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="15" fill="#00251a"/><text x="15" y="20" text-anchor="middle" fill="#26a69a" font-size="7" font-weight="800" font-family="Rajdhani">Infosys</text></svg></div>
+        <div class="t-name">INFY</div>
+        <div class="t-action down">Sell</div>
+        <div class="t-meta">09:48 AM<br>Qty: 8</div>
+        <div class="t-price down">₹1,512.20</div>
+      </div>
+      <div class="trade-row-item">
+        <div class="t-logo logo-icici"><svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="15" fill="#7f0000"/><ellipse cx="15" cy="17" rx="5" ry="6" fill="#ff5722" opacity=".85"/><ellipse cx="15" cy="20" rx="3" ry="3.5" fill="#ff8a65"/></svg></div>
+        <div class="t-name">ICICI BANK</div>
+        <div class="t-action up">Buy</div>
+        <div class="t-meta">09:30 AM<br>Qty: 12</div>
+        <div class="t-price up">₹1,245.10</div>
+      </div>
+      <div class="trade-row-item">
+        <div class="t-logo logo-hdfc"><svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="15" fill="#5c0000"/><rect x="13" y="8" width="4" height="14" rx="1.5" fill="white"/><rect x="8" y="13" width="14" height="4" rx="1.5" fill="white"/></svg></div>
+        <div class="t-name">HDFC BANK</div>
+        <div class="t-action up">Buy</div>
+        <div class="t-meta">09:15 AM<br>Qty: 6</div>
+        <div class="t-price up">₹1,678.35</div>
+      </div>
+    </div>
+
+    <!-- QUICK TRADE -->
+    <div class="card card-quick">
+      <div class="card-title">Quick Trade</div>
+      <div class="quick-inner">
+        <div class="qgroup">
+          <div class="q-select-wrap">
+            <select class="q-select" id="qStock">
+              <option>RELIANCE (NSE)</option>
+              <option>TCS (NSE)</option>
+              <option>INFY (NSE)</option>
+              <option>HDFC BANK (NSE)</option>
+              <option>ICICI BANK (NSE)</option>
+              <option>TATA MOTORS (NSE)</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;padding-top:18px">
+          <button class="btn-buy-q" onclick="setQAction('BUY')">BUY</button>
+          <button class="btn-sell-q" onclick="setQAction('SELL')">SELL</button>
+        </div>
+        <div class="qgroup">
+          <span class="q-label">Quantity</span>
+          <div class="q-input-wrap">
+            <button class="q-step" onclick="changeQ(-1)">−</button>
+            <input class="q-input" type="number" id="qQty" value="10" min="1">
+            <button class="q-step" onclick="changeQ(1)">+</button>
+          </div>
+        </div>
+        <div class="qgroup">
+          <span class="q-label">Order Type</span>
+          <div class="q-select-wrap">
+            <select class="q-select" id="qOrderType">
+              <option>Market Order</option>
+              <option>Limit Order</option>
+              <option>Stop Loss</option>
+              <option>Stop Limit</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-place-order" onclick="placeOrder()">Place Order</button>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /layout -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── CLOCK ── */
+function tick(){
+  const n=new Date();
+  let h=n.getHours(),m=n.getMinutes(),s=n.getSeconds(),ap=h>=12?'PM':'AM';
+  h=h%12||12;
+  document.getElementById('clock').textContent=
+    String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+' '+ap;
+}
+tick(); setInterval(tick,1000);
+
+/* ── SIDEBAR TOGGLE ── */
+let collapsed=false,mobileOpen=false;
+function toggleSidebar(){
+  const s=document.getElementById('sidebar');
+  const ov=document.getElementById('overlay');
+  if(window.innerWidth<=760){
+    mobileOpen=!mobileOpen;
+    s.classList.toggle('mobile-open',mobileOpen);
+    ov.style.display=mobileOpen?'block':'none';
+  } else {
+    collapsed=!collapsed;
+    s.classList.toggle('collapsed',collapsed);
+  }
+}
+function closeMobileSidebar(){
+  const s=document.getElementById('sidebar');
+  document.getElementById('overlay').style.display='none';
+  s.classList.remove('mobile-open');mobileOpen=false;
+}
+
+/* ── NAV ── */
+function setNav(el,name){
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+  el.classList.add('active');
+  if(window.innerWidth<=760) closeMobileSidebar();
+}
+
+/* ── CHART TABS ── */
+function setChartTab(el,p){
+  document.querySelectorAll('.chart-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  rebuildCandleChart(p);
+}
+
+/* ── PORTFOLIO LINE CHART ── */
+(function(){
+  const ctx=document.getElementById('portChart').getContext('2d');
+  const labels=['','','','','','','','','','','','','',''];
+  const data=[105000,108000,103000,112000,110000,115000,113000,118000,116000,120000,119000,123000,121000,125430];
+  const grad=ctx.createLinearGradient(0,0,0,100);
+  grad.addColorStop(0,'rgba(124,58,237,0.4)');grad.addColorStop(1,'rgba(124,58,237,0)');
+  const grad2=ctx.createLinearGradient(0,0,400,0);
+  grad2.addColorStop(0,'#7c3aed');grad2.addColorStop(0.5,'#2979ff');grad2.addColorStop(1,'#00d46a');
+  new Chart(ctx,{type:'line',data:{labels,datasets:[{data,borderColor:grad2,borderWidth:2.5,fill:true,backgroundColor:grad,pointRadius:0,tension:0.45}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
+})();
+
+/* ── GAUGE (doughnut) ── */
+(function(){
+  const ctx=document.getElementById('gaugeChart').getContext('2d');
+  new Chart(ctx,{type:'doughnut',data:{datasets:[{data:[73,18,9],backgroundColor:['#00d46a','#475569','#ef4444'],borderWidth:0,circumference:180,rotation:270}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},cutout:'72%'}});
+})();
+
+/* ── HOLDINGS DONUT ── */
+(function(){
+  const ctx=document.getElementById('donutChart').getContext('2d');
+  new Chart(ctx,{type:'doughnut',data:{datasets:[{data:[28.4,21.7,18.6,15.3,10.2,5.8],backgroundColor:['#00d46a','#818cf8','#4a90d9','#f59e0b','#f97316','#94a3b8'],borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return ' '+c.raw+'%'}}}},cutout:'60%'}});
+})();
+
+/* ── CANDLE CHART ── */
+let candleChart;
+function rebuildCandleChart(period){
+  if(candleChart){candleChart.destroy();}
+  const ctx=document.getElementById('candleChart').getContext('2d');
+  // Generate candlestick-like bar chart
+  const n=period==='1D'?28:period==='1W'?20:period==='1M'?30:period==='3M'?60:120;
+  const labels=[],ups=[],downs=[],base=period==='1D'?24200:period==='1W'?23800:22000;
+  let v=base;
+  for(let i=0;i<n;i++){
+    const d=(Math.random()-.45)*120;const isUp=d>=0;
+    const o=v,c=v+d,h=Math.max(o,c)+(Math.random()*40),l=Math.min(o,c)-(Math.random()*40);
+    labels.push(period==='1D'?`${9+Math.floor(i*6.5/n)}:${String(Math.floor((i*390/n)%60)).padStart(2,'0')}`:'');
+    ups.push(isUp?{x:i,o,h,l,c}:null);
+    downs.push(!isUp?{x:i,o,h,l,c}:null);
+    v=c;
+  }
+  // Use bar chart as approximation
+  const barData=[];const colors=[];
+  for(let i=0;i<n;i++){const d=ups[i]||downs[i];const up=!!ups[i];barData.push(Math.abs(d.c-d.o)||2);colors.push(up?'rgba(0,212,106,0.85)':'rgba(239,68,68,0.85)');}
+  candleChart=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data:barData,backgroundColor:colors,borderRadius:1,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{ticks:{color:'#4a6a8a',font:{size:9},maxRotation:0},grid:{color:'rgba(28,47,74,0.4)'}},y:{ticks:{color:'#4a6a8a',font:{size:9}},grid:{color:'rgba(28,47,74,0.4)'}}}}});
+}
+rebuildCandleChart('1D');
+
+/* ── QUICK TRADE ── */
+let qAction='BUY';
+function setQAction(a){qAction=a;}
+function changeQ(d){const i=document.getElementById('qQty');i.value=Math.max(1,(parseInt(i.value)||1)+d);}
+function placeOrder(){
+  const s=document.getElementById('qStock').value;
+  const q=document.getElementById('qQty').value;
+  const o=document.getElementById('qOrderType').value;
+  showToast(`✅ ${qAction} ${q} × ${s} — ${o} placed!`);
+}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3000);
+}
+</script>
+</body>
+</html>
